@@ -1,0 +1,38 @@
+import aiosqlite
+
+from config import DATABASE_PATH
+
+
+async def init_db():
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY,
+                city TEXT
+            )
+        """)
+
+        await db.commit()
+
+
+async def save_user_city(user_id: int, city: str):
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        await db.execute("""
+            INSERT INTO users (user_id, city)
+            VALUES (?, ?)
+            ON CONFLICT(user_id)
+            DO UPDATE SET city = excluded.city
+        """, (user_id, city))
+
+        await db.commit()
+
+
+async def get_user_city(user_id: int):
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        async with db.execute(
+            "SELECT city FROM users WHERE user_id = ?",
+            (user_id,)
+        ) as cursor:
+            row = await cursor.fetchone()
+
+    return row[0] if row else None
